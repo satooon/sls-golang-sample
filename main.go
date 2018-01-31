@@ -4,22 +4,25 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	"context"
 	"github.com/aws/aws-lambda-go/events"
-	"log"
-	"net/http"
+	"github.com/awslabs/aws-lambda-go-api-proxy/gin"
+	"github.com/gin-gonic/gin"
 )
+
+var ginLambda *ginlambda.GinLambda
 
 func main() {
 	lambda.Start(Handler)
 }
 
 func Handler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	log.Printf("Processing request data for request %s.\n", request.RequestContext.RequestID)
-	log.Printf("Body size = %d.\n", len(request.Body))
-
-	log.Println("Headers:")
-	for key, value := range request.Headers {
-		log.Printf("    %s: %s\n", key, value)
+	if ginLambda == nil {
+		r := gin.Default()
+		r.GET("/test", test)
+		ginLambda = ginlambda.New(r)
 	}
+	return ginLambda.Proxy(request)
+}
 
-	return events.APIGatewayProxyResponse{Body:"Hello World", StatusCode:http.StatusOK}, nil
+func test(ctx *gin.Context) {
+	ctx.JSON(200, gin.H{"message": "test!!"})
 }
